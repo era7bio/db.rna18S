@@ -149,81 +149,15 @@ We are using the ribosomal RNA type annotation on RNACentral as a first catch-al
   )
 
 
+  import bio4jTaxonomyBundle._
+
   val predicate: (Row, FASTA.Value) => Boolean = {
 
-    (row, fasta) => {
-
-      import bio4jTaxonomyBundle._
-      val taxonID = row select id
-      val rnaType = row select rna_type
-      val length  = fasta.getV(sequence).value.length
-
-      ( rnaType contains ribosomalRNAType                           ) &&
-      ( length >= minimum18SLength                                  ) &&
-      ( taxonID.isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
-      ( !taxonID.isDescendantOfOneIn(uninformativeTaxaIDs)          )
-    }
-  }
-
-  case object bio4jTaxonomyBundle extends AnyBio4jDist {
-
-    lazy val s3folder: S3Folder = S3Folder("resources.ohnosequences.com", "16s/bio4j-taxonomy/")
-
-    lazy val configuration = DefaultBio4jTitanConfig(dbLocation)
-
-    // the graph; its only (direct) use is for indexes
-    // FIXME: this works but still with errors, should be fixed (something about transactions)
-    lazy val graph: TitanNCBITaxonomyGraph =
-      new TitanNCBITaxonomyGraph(
-        new DefaultTitanGraph(TitanFactory.open(configuration))
-      )
-
-    type TaxonNode = com.bio4j.model.ncbiTaxonomy.vertices.NCBITaxon[
-      DefaultTitanGraph,
-      TitanVertex, VertexLabelMaker,
-      TitanEdge, EdgeLabelMaker
-    ]
-```
-
-**NOTE** all methods here work with a non-reflexive definition of ancestor/descendant
-
-```scala
-    implicit class IdOps(val id: String) extends AnyVal {
-
-      // Java to Scala
-      private def optional[T](jopt: java.util.Optional[T]): Option[T] =
-        if (jopt.isPresent) Some(jopt.get) else None
-
-      def isDescendantOfOneIn(ancestors: Set[String]): Boolean = {
-
-        @annotation.tailrec
-        def isDescendantOfOneIn_rec(node: TaxonNode): Boolean =
-          optional(node.ncbiTaxonParent_inV) match {
-            case None => false
-            case Some(parent) =>
-              if (ancestors.contains( parent.id() )) true
-              else isDescendantOfOneIn_rec(parent)
-          }
-
-        optional(graph.nCBITaxonIdIndex.getVertex(id))
-          .map(isDescendantOfOneIn_rec)
-          .getOrElse(false)
-      }
-
-      def hasEnvironmentalSamplesAncestor: Boolean = {
-
-        def hasEnvironmentalSamplesAncestor_rec(node: TaxonNode): Boolean =
-          optional(node.ncbiTaxonParent_inV) match {
-            case None => false
-            case Some(parent) =>
-              if (parent.name == "environmental samples") true
-              else hasEnvironmentalSamplesAncestor_rec(parent)
-          }
-
-        optional(graph.nCBITaxonIdIndex.getVertex(id))
-          .fold(false)(hasEnvironmentalSamplesAncestor_rec)
-      }
-    }
+    (row, fasta) =>
+      ( (row select rna_type) contains ribosomalRNAType                     ) &&
+      ( fasta.getV(sequence).value.length >= minimum18SLength               ) &&
+      ( (row select id).isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
+      ( !(row select id).isDescendantOfOneIn(uninformativeTaxaIDs)          )
   }
 
   // bundle to generate the DB (see the runBundles file in tests)
@@ -235,9 +169,67 @@ We are using the ribosomal RNA type annotation on RNACentral as a first catch-al
 
   // bundle to obtain and use the generated release
   case object release extends BlastDBRelease(generate)
+}
 
+case object bio4jTaxonomyBundle extends AnyBio4jDist {
 
+  lazy val s3folder: S3Folder = S3Folder("resources.ohnosequences.com", "16s/bio4j-taxonomy/")
 
+  lazy val configuration = DefaultBio4jTitanConfig(dbLocation)
+
+  // the graph; its only (direct) use is for indexes
+  // FIXME: this works but still with errors, should be fixed (something about transactions)
+  lazy val graph: TitanNCBITaxonomyGraph =
+    new TitanNCBITaxonomyGraph(
+      new DefaultTitanGraph(TitanFactory.open(configuration))
+    )
+
+  type TaxonNode = com.bio4j.model.ncbiTaxonomy.vertices.NCBITaxon[
+    DefaultTitanGraph,
+    TitanVertex, VertexLabelMaker,
+    TitanEdge, EdgeLabelMaker
+  ]
+```
+
+**NOTE** all methods here work with a non-reflexive definition of ancestor/descendant
+
+```scala
+  implicit class IdOps(val id: String) extends AnyVal {
+
+    // Java to Scala
+    private def optional[T](jopt: java.util.Optional[T]): Option[T] =
+      if (jopt.isPresent) Some(jopt.get) else None
+
+    def isDescendantOfOneIn(ancestors: Set[String]): Boolean = {
+
+      @annotation.tailrec
+      def isDescendantOfOneIn_rec(node: TaxonNode): Boolean =
+        optional(node.ncbiTaxonParent_inV) match {
+          case None => false
+          case Some(parent) =>
+            if (ancestors.contains( parent.id() )) true
+            else isDescendantOfOneIn_rec(parent)
+        }
+
+      optional(graph.nCBITaxonIdIndex.getVertex(id))
+        .map(isDescendantOfOneIn_rec)
+        .getOrElse(false)
+    }
+
+    def hasEnvironmentalSamplesAncestor: Boolean = {
+
+      def hasEnvironmentalSamplesAncestor_rec(node: TaxonNode): Boolean =
+        optional(node.ncbiTaxonParent_inV) match {
+          case None => false
+          case Some(parent) =>
+            if (parent.name == "environmental samples") true
+            else hasEnvironmentalSamplesAncestor_rec(parent)
+        }
+
+      optional(graph.nCBITaxonIdIndex.getVertex(id))
+        .fold(false)(hasEnvironmentalSamplesAncestor_rec)
+    }
+  }
 }
 
 ```
