@@ -147,10 +147,10 @@ case object rna18s extends AnyBlastDB {
   val predicate: (Row, FASTA.Value) => Boolean = {
 
     (row, fasta) =>
-      ( (row select rna_type) contains ribosomalRNAType                     ) &&
-      ( fasta.getV(sequence).value.length >= minimum18SLength               ) &&
-      ( (row select id).isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
-      ( !(row select id).isDescendantOfOneIn(uninformativeTaxaIDs)          )
+      ( (row select rna_type) contains ribosomalRNAType                         ) &&
+      ( fasta.getV(sequence).value.length >= minimum18SLength                   ) &&
+      ( (row select tax_id).isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
+      ( !(row select tax_id).isDescendantOfOneIn(uninformativeTaxaIDs)          )
   }
 
   // bundle to generate the DB (see the runBundles file in tests)
