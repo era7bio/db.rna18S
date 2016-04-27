@@ -154,13 +154,7 @@ case object rna18s extends AnyBlastDB {
       ( rnaType contains ribosomalRNAType                           ) &&
       ( length >= minimum18SLength                                  ) &&
       ( taxonID.isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
-      (
-        !(
-          ( taxonID.isDescendantOfOneIn(uninformativeTaxaIDs) ) ||
-          ( taxonID == environmentalSamplesID.toString        ) ||
-          ( taxonID == unclassifiedEukaryotesID.toString      )
-        )
-      )
+      ( !taxonID.isDescendantOfOneIn(uninformativeTaxaIDs)          )
     }
   }
 
