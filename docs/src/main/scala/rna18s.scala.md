@@ -161,12 +161,11 @@ We are using the ribosomal RNA type annotation on RNACentral as a first catch-al
       ( rnaType contains ribosomalRNAType                           ) &&
       ( length >= minimum18SLength                                  ) &&
       ( taxonID.isDescendantOfOneIn(Set(eukaryotaTaxonID.toString)) ) &&
-      ( taxonID.hasEnvironmentalSamplesAncestor                     ) &&
       (
         !(
           ( taxonID.isDescendantOfOneIn(uninformativeTaxaIDs) ) ||
-          ( taxonID == environmentalSamplesID                 ) ||
-          ( taxonID == unclassifiedEukaryotesID               )
+          ( taxonID == environmentalSamplesID.toString        ) ||
+          ( taxonID == unclassifiedEukaryotesID.toString      )
         )
       )
     }
