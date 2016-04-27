@@ -1,0 +1,1 @@
+- move the bio4j bundle out of the db bundle #3
