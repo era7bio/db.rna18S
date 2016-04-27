@@ -1,0 +1,1 @@
+- fix predicate requiring descendant of env samples #2
